@@ -78,7 +78,7 @@ Use these prompts to showcase the unique capabilities of the **MCP + LangGraph a
 ## 🚀 Setup & Installation
 
 ### 1. Prerequisites
-- Python **3.10+**
+- Python **3.12** recommended
 - **Node.js / NPM** (for `npx`)
 - A **DigitalOcean API Token**
 - A **Gradient AI Model Access Key**
@@ -90,7 +90,7 @@ Install the required Python dependencies:
 ```bash
 git clone https://github.com/dosraashid/adk-langgraph-demo
 cd adk-langgraph-demo
-python -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
