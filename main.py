@@ -1,135 +1,175 @@
 import os
 import asyncio
-from typing import Optional, TypedDict, Annotated
+import operator
+from typing import TypedDict, Annotated, List
 from dotenv import load_dotenv
 
-# --- LANGCHAIN & LANGGRAPH IMPORTS ---
-from langchain_gradient import ChatGradient
-from langchain_core.messages import HumanMessage
-from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph.message import add_messages
+# --- NATIVE CLOUD SDKs ---
+# We use the native Gradient SDK to access GPT-5.4 on DigitalOcean
+from gradient import Gradient
 
-# --- MCP & ADK IMPORTS ---
+# --- AGENTIC ORCHESTRATION ---
+# LangGraph manages the state (memory) and the "thinking vs acting" loop
+from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
+from langchain_core.tools import StructuredTool
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+
+# --- INFRASTRUCTURE ADAPTERS ---
+# Connects our agent to DigitalOcean's Model Context Protocol (MCP) server
 from langchain_mcp_adapters.client import MultiServerMCPClient
+
+# --- GRADIENT AGENT FRAMEWORK ---
+# The @entrypoint decorator registers this script with 'gradient agent run'
 from gradient_adk import entrypoint
 
-# Load API keys from the .env file
 load_dotenv()
 
-# --- 1. MANAGED PERSISTENCE (STATE SCHEMA) ---
-# This class defines the "Memory" of the agent.
-# Using add_messages ensures that the AI remembers the full conversation
-# history instead of just the last message.
+# --- 1. STATE DEFINITION ---
+# This defines what the agent "carries" in its head. 
+# operator.add tells LangGraph to append new data to existing history.
 class AgentState(TypedDict):
-    messages: Annotated[list, add_messages]
+    messages: Annotated[List[AnyMessage], operator.add]
+    shared_memory: Annotated[List[str], operator.add]
 
-# --- 2. THE CORE AGENT LOGIC ---
-async def run_mcp_agent(user_input: str, thread_id: str, checkpointer: MemorySaver):
+# --- 2. THE MEMORY VAULT ---
+# Initialized globally so it persists as long as the local server runs.
+# It uses 'thread_id' to separate different user sessions.
+shared_checkpointer = MemorySaver()
+
+# --- 3. TOOL UTILITIES ---
+def stringify_mcp_tools(tools):
     """
-    The orchestrator function. It connects to the tools, hits the 
-    Serverless LLM, and manages the LangGraph loop.
+    Standardizes MCP tool outputs. 
+    Our LLM expects strings, so we wrap the raw JSON/List outputs 
+    from the MCP server into a single string format.
     """
-    
-    # --- HYBRID RUNTIME: CONNECTING TO MCP (NODE.JS) ---
-    # We launch the Official DigitalOcean MCP server via 'stdio'.
-    # This spawns a Node.js process that Python can talk to directly.
-    client = MultiServerMCPClient({
+    wrapped = []
+    for tool in tools:
+        def create_wrapper(t):
+            # The async execution layer for the cloud tools
+            async def wrapped_func(**kwargs):
+                res = await t.ainvoke(kwargs) 
+                if isinstance(res, list):
+                    return "\n".join([str(b.get("text", b)) for b in res if isinstance(b, dict)])
+                return str(res)
+            return wrapped_func
+        
+        wrapped.append(StructuredTool.from_function(
+            func=create_wrapper(tool),
+            name=tool.name,
+            description=tool.description,
+            coroutine=create_wrapper(tool) # Links the async coroutine for execution
+        ))
+    return wrapped
+
+# --- 4. CORE AGENT LOGIC ---
+async def run_mcp_agent(user_input: str, thread_id: str):
+    # Connect to the DigitalOcean MCP server via npx
+    mcp_client = MultiServerMCPClient({
         "digitalocean": {
             "transport": "stdio",
             "command": "npx",
-            "args": ["-y", "@digitalocean/mcp", "--services", "apps,droplets,databases"],
-            "env": {
-                **os.environ, 
-                "DIGITALOCEAN_API_TOKEN": os.getenv("DIGITALOCEAN_API_TOKEN")
-            }
+            "args": ["-y", "@digitalocean/mcp", "--services", "apps,droplets"],
+            "env": {**os.environ}
         }
     })
     
-    # We use an async context manager to ensure the connection is cleaned up
-    async with client:
-        # Load tools (like get_droplets) dynamically from the MCP server
-        tools = await client.get_tools()
-        
-        # --- SERVERLESS INFERENCE: THE BRAIN ---
-        # We hit the Llama 3.3 model hosted on DigitalOcean's managed GPUs.
-        llm = ChatGradient(
-            model="llama3.3-70b-instruct",
-            api_key=os.getenv("GRADIENT_MODEL_ACCESS_KEY") or os.getenv("DIGITALOCEAN_INFERENCE_KEY"),
-        )
-        
-        # We "bind" the tools so the LLM knows it has 'hands' to use
-        llm_with_tools = llm.bind_tools(tools)
+    # Initialize the high-performance Gradient inference client
+    inf_client = Gradient(model_access_key=os.environ.get("GRADIENT_MODEL_ACCESS_KEY"))
 
-        # --- LANGGRAPH ORCHESTRATION ---
-        # The Reasoning Node: Where the LLM decides what to do next
-        def call_model(state: AgentState):
-            response = llm_with_tools.invoke(state["messages"])
-            return {"messages": [response]}
+    try:
+        # Discover what tools our cloud environment currently supports
+        raw_tools = await mcp_client.get_tools()
+        tools = stringify_mcp_tools(raw_tools)
 
-        # Define the Graph Flow
+        # NODE: THE BRAIN (LLM)
+        async def call_model(state: AgentState):
+            tool_list = ", ".join([t.name for t in tools])
+            # System message guiding the frontier model's ReAct loop format
+            sys_msg = (
+                f"You are a DigitalOcean Cloud Expert. Tools available: {tool_list}. "
+                "1. If the answer is in the conversation history, use it. "
+                "2. If you need cloud data, reply with ONLY: 'EXECUTE: [tool_name]'. "
+                "3. Once you have data, summarize it naturally for the user."
+            )
+            
+            msgs = [{"role": "system", "content": sys_msg}]
+            for m in state["messages"]:
+                role = "user" if isinstance(m, HumanMessage) else "assistant"
+                msgs.append({"role": role, "content": str(m.content)})
+
+            # GPT-5.4 call - using a thread to keep the event loop non-blocking
+            resp = await asyncio.to_thread(
+                inf_client.chat.completions.create,
+                messages=msgs,
+                model="openai-gpt-5.4",
+                max_tokens=1000
+            )
+            return {"messages": [AIMessage(content=resp.choices[0].message.content)]}
+
+        # NODE: THE ARMS (Tool Execution)
+        async def tool_step(state: AgentState):
+            last_msg = state["messages"][-1].content
+            for t in tools:
+                if t.name in last_msg:
+                    print(f"DEBUG: Executing {t.name}...")
+                    # Trigger the actual cloud API call (passing empty dict for schema validation)
+                    obs = await t.ainvoke({}) 
+                    return {"messages": [HumanMessage(content=f"Observation from {t.name}: {obs}")]}
+            return state
+
+        # --- 5. GRAPH CONSTRUCTION ---
         workflow = StateGraph(AgentState)
         workflow.add_node("agent", call_model)
-        workflow.add_node("action", ToolNode(tools)) # Executes the MCP tools
+        workflow.add_node("action", tool_step)
+        
         workflow.add_edge(START, "agent")
         
-        # Routing Logic: Does the LLM want to use a tool or just talk?
-        def should_continue(state: AgentState):
-            last_message = state["messages"][-1]
-            if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        # ROUTER: Decides if we need more data or if we are done
+        def router(state: AgentState):
+            content = state["messages"][-1].content
+            # If the model wants to execute a tool and hasn't seen the results yet
+            if "EXECUTE:" in content and "Observation from" not in content:
                 return "action"
             return END
 
-        workflow.add_conditional_edges("agent", should_continue)
+        workflow.add_conditional_edges("agent", router)
         workflow.add_edge("action", "agent")
 
-        # Compile the agent with a "Checkpointer" for managed session persistence
-        app = workflow.compile(checkpointer=checkpointer)
-
-        # Execute for the specific thread_id (isolates user sessions)
+        # Compile the graph with our persistent memory checkpointer
+        app = workflow.compile(checkpointer=shared_checkpointer)
         config = {"configurable": {"thread_id": thread_id}}
-        input_state = {"messages": [HumanMessage(content=user_input)]}
         
-        result = await app.ainvoke(input_state, config=config)
-        return result["messages"][-1].content
+        # Determine if this thread has history
+        existing_state = app.get_state(config)
+        initial_input = {"messages": [HumanMessage(content=user_input)]}
+        if not existing_state.values:
+            # First time for this thread, initialize shared_memory
+            initial_input["shared_memory"] = []
 
-# --- 3. THE CLI ENTRYPOINT ---
+        # Run the full cycle
+        final_state = await app.ainvoke(initial_input, config=config)
+        return final_state["messages"][-1].content
+
+    finally:
+        # Clean shutdown of the MCP connection
+        if hasattr(mcp_client, "close"): 
+            await mcp_client.close()
+
+# --- 6. AGENT ENTRYPOINT ---
 @entrypoint
-async def main(body: dict):
-    """Entrypoint for 'gradient agent run' usage."""
-    user_input = body.get("prompt", "Hello")
-    thread_id = body.get("thread_id", "cli-user-1")
+async def main(data, context):
+    """
+    Standard entrypoint for the Gradient ADK.
+    Takes incoming JSON data from the /run endpoint.
+    """
+    user_prompt = data.get("prompt") or data.get("text") or "Hello"
+    thread_id = data.get("thread_id", "default-session")
     
-    memory = MemorySaver()
-    final_response = await run_mcp_agent(user_input, thread_id, memory)
-
-    return {"response": final_response, "thread_id": thread_id}
-
-# --- 4. INTERACTIVE DEMO MODE ---
-async def interactive_chat():
-    """Run a continuous, memory-aware chat in your terminal."""
-    print("\n[Demo DevOps Agent: Online]")
-    print("Inference: Llama 3.3 (Serverless Inference)")
-    print("Tools: Official DigitalOcean MCP (stdio)\n")
-    
-    # We initialize memory ONCE here so it persists between 'input' prompts
-    memory = MemorySaver()
-    session_id = "demo-session-123"
-
-    while True:
-        prompt = input("You: ")
-        if prompt.lower() in ['exit', 'quit']:
-            break
-        
-        try:
-            # The agent will remember previous messages due to the persistent memory object
-            response = await run_mcp_agent(prompt, session_id, memory)
-            print(f"\nCloudPilot: {response}\n")
-        except Exception as e:
-            print(f"\n❌ Execution Error: {e}\n")
-
-if __name__ == "__main__":
-    import warnings
-    warnings.filterwarnings("ignore") # Keep the terminal output clean
-    asyncio.run(interactive_chat())
+    try:
+        response = await run_mcp_agent(user_prompt, thread_id)
+        return {"result": response}
+    except Exception as e:
+        print(f"CRITICAL ERROR: {str(e)}")
+        return {"error": f"Agent encountered an issue: {str(e)}"}
