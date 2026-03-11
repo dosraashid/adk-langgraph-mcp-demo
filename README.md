@@ -39,14 +39,18 @@ adk-langgraph-demo/
 
 ---
 
-## 🚀 Recommended "Wow" Tests
-Once deployed, try these commands to show off the MCP integration:
+### 🚀 Recommended "Wow" Tests
 
-| Goal | Prompt Payload |
-| :--- | :--- |
-| **Discovery** | `{"prompt": "What DigitalOcean tools do you have access to right now?", "thread_id": "mcp-demo"}` |
-| **Live Stats** | `{"prompt": "List my active droplets and tell me which ones are in NYC3.", "thread_id": "mcp-demo"}` |
-| **Reasoning** | `{"prompt": "Check my account balance. Based on my usage, do I have any idle resources?", "thread_id": "mcp-demo"}` |
+Use these prompts to showcase the unique capabilities of the MCP + LangGraph architecture:
+
+| Feature Highlight | Goal | Prompt Payload |
+| :--- | :--- | :--- |
+| **MCP Discovery** | **Tool Awareness** | `{"prompt": "What DigitalOcean tools do you have access to right now?", "thread_id": "mcp-demo"}` |
+| **Live Account Data** | **Real-time Stats** | `{"prompt": "List my active droplets and tell me which ones are in NYC3.", "thread_id": "mcp-demo"}` |
+| **Reasoning** | **Infrastructure Audit** | `{"prompt": "Check my account balance. Based on my usage, do I have any idle resources?", "thread_id": "mcp-demo"}` |
+| **LangGraph Orchestration** | **Multi-step Debugging** | `{"prompt": "Find my app named 'web-service', check its last deployment status, and if it failed, summarize the error logs.", "thread_id": "mcp-demo"}` |
+| **Managed Persistence** | **Cross-Session Memory** | `{"prompt": "Remember that 'web-service' is my high-priority app. Based on our last chat, is it healthy now?", "thread_id": "mcp-demo"}` |
+| **Hybrid Runtime** | **Intelligence + Control** | `{"prompt": "Analyze my account spending. Suggest which droplets I can resize or power down to save at least 10% this month.", "thread_id": "mcp-demo"}` |
 
 ---
 
@@ -74,41 +78,51 @@ Once deployed, try these commands to show off the MCP integration:
 This template is designed to work perfectly in two different environments without changing any code.
 
 ### Option 1: Run Locally (Fast Testing)
-Keep the agent logic on your local machine while using DigitalOcean Serverless GPUs for the AI "brain."
 
-**1. Start the server:**
-```bash
-gradient agent run
-```
+Keep the agent logic on your local machine while using DigitalOcean Serverless GPUs for the AI "brain" and your local Node.js runtime to power the MCP server.
 
-**2. Test the "Golden Path" (in a new terminal):**
-*Step A: Multi-step reasoning (Find user -> Check servers)*
-```bash
-curl -X POST http://localhost:8080/run \
--H "Content-Type: application/json" \
--d '{"prompt": "Hi, I am alice@dev.com. Are any of my servers failing?", "thread_id": "demo-1"}'
-```
+1. **Start the server:**
+   ```bash
+   gradient agent run
+   ```
 
-*Step B: Action & Persistence (Fix the issue)*
-```bash
-curl -X POST http://localhost:8080/run \
--H "Content-Type: application/json" \
--d '{"prompt": "Please restart the failing one.", "thread_id": "demo-1"}'
-```
+2. **Test the "MCP Golden Path" (in a new terminal):**
+
+   *Step A: Live Infrastructure Discovery (The Handshake)*
+   ```bash
+   curl -X POST http://localhost:8080/run \
+   -H "Content-Type: application/json" \
+   -d '{"prompt": "What DigitalOcean tools do you have access to right now?", "thread_id": "mcp-demo"}'
+   ```
+
+   *Step B: Real-time Account Analysis (Read)*
+   ```bash
+   curl -X POST http://localhost:8080/run \
+   -H "Content-Type: application/json" \
+   -d '{"prompt": "List my active droplets and their current status.", "thread_id": "mcp-demo"}'
+   ```
+
+   *Step C: Action & Reasoning (Manage)*
+   ```bash
+   curl -X POST http://localhost:8080/run \
+   -H "Content-Type: application/json" \
+   -d '{"prompt": "Based on my current resource usage, do you recommend any optimizations?", "thread_id": "mcp-demo"}'
+   ```
+
+---
 
 ### Option 2: Deploy to Cloud (Production)
+
 Push your agent to the DigitalOcean Cloud Panel for 24/7 access, automatic scaling, and built-in observability.
 
-**1. Export your Personal Access Token:**
-*(This token requires Read/Write API permissions from your DO Dashboard)*
-```bash
-export DIGITALOCEAN_API_TOKEN="dop_v1_your_personal_token_here"
-```
+1. **Export your Personal Access Token:** *(This token is used by the CLI for deployment and by the Agent's MCP server for resource management)*
+   ```bash
+   export DIGITALOCEAN_API_TOKEN="dop_v1_your_personal_token_here"
+   ```
 
-**2. Deploy the agent:**
-```bash
-gradient agent deploy
-```
+2. **Deploy the agent:**
+   ```bash
+   gradient agent deploy
+   ```
 
-**3. Monitor & Manage:**
-Once deployed, your agent will be live and accessible via a public endpoint. You can view logs, execution traces, and manage API keys in the **GenAI > Agents** section of your DigitalOcean Console.
+3. **Monitor & Manage:** Once deployed, your agent will be live and accessible via a public endpoint. You can view logs, execution traces, and manage your `DIGITALOCEAN_API_TOKEN` secret in the **GenAI > Agents** section of your DigitalOcean Console.
