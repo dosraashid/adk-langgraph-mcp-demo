@@ -83,17 +83,21 @@ Use these prompts to showcase the unique capabilities of the **MCP + LangGraph a
 - A **DigitalOcean API Token**
 - A **Gradient AI Model Access Key**
 
-### 2. Install
+### 2. Environment Setup
 
 Install the required Python dependencies:
 
 ```bash
+git clone https://github.com/dosraashid/adk-langgraph-demo
+cd adk-langgraph-demo
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure
+### 3. Credentials
 
-Create a .env file in the root directory and add your credentials:
+Update the .env file in the root directory and add your credentials:
 
 ```bash
 GRADIENT_MODEL_ACCESS_KEY="your_model_access_key"
