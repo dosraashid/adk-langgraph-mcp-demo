@@ -1,8 +1,0 @@
-{
-  "name": "cloud-pilot-mcp",
-  "version": "1.0.0",
-  "description": "Triggers DigitalOcean to install Node.js alongside Python",
-  "dependencies": {
-    "@digitalocean/mcp": "latest"
-  }
-}
