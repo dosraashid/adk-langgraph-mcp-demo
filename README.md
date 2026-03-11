@@ -142,15 +142,15 @@ curl -X POST http://localhost:8080/run \
 
 ---
 
-## 🧠 Testing Context Memory & Thread Isolation
+### 🧠 Testing Context Memory & Thread Isolation
 
-Use the following test cases in sequence to verify that the agent remembers previous interactions on the same thread, but isolates data from different threads.
+Use the following test cases in sequence to verify that the agent remembers previous interactions on the same thread, but securely isolates data from different threads.
 
 | Test Case | Purpose | Terminal Command (`curl`) | Expected Behavior |
 | :--- | :--- | :--- | :--- |
-| **1. Establish Context** | Fetches initial data and saves it to a specific thread. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "Can you list the names of any 5 DigitalOcean apps in my account?", "thread_id": "session-alpha"}'` | The agent triggers the MCP tool, retrieves your apps, and returns a list of 5 names. |
-| **2. Test Memory** | Asks a follow-up question requiring exact recall of the previous turn. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What were the names of the first and last apps on that list?", "thread_id": "session-alpha"}'` | The agent answers immediately with the two specific names **without** running the list tool again, proving it remembers the context. |
-| **3. Test Isolation** | Verifies that a new thread starts with a blank slate. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What were the names of the first and last apps on that list?", "thread_id": "session-beta"}'` | The agent gets confused or states it doesn't have a list to reference, proving that `session-beta` cannot see the data from `session-alpha`. |
+| **1. Establish Context** | Fetches data and saves it to a specific thread. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "Can you list the names of any 5 DigitalOcean apps in my account?", "thread_id": "session-alpha"}'` | Agent triggers the MCP tool, retrieves apps, and returns 5 names. |
+| **2. Test Memory** | Verifies the agent remembers the exact conversation history. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What was the very first question I asked you in this conversation?", "thread_id": "session-alpha"}'` | Agent answers with: *"Can you list the names of any 5 DigitalOcean apps..."* |
+| **3. Test Isolation** | Proves threads are kept completely separate. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What was the very first question I asked you in this conversation?", "thread_id": "session-beta"}'` | Agent answers with: *"What was the very first question I asked you..."* proving it has no access to session-alpha. |
 
 ---
 ---
