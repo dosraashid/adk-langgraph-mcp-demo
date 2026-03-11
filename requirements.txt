@@ -1,5 +1,5 @@
 gradient-adk==0.2.11
-langchain-core==0.3.37
+langchain-core==0.3.81
 langchain-gradient==0.1.24
 langgraph>=1.1.0
 langchain-mcp-adapters==0.2.0
