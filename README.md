@@ -75,7 +75,7 @@ Use these prompts to showcase the unique capabilities of the **MCP + LangGraph a
 
 ---
 
-## 🚀 Setup & Installation
+# 🚀 Setup & Installation
 
 ### 1. Prerequisites
 - Python **3.12** recommended
@@ -125,7 +125,7 @@ Once running, you can begin issuing prompts to the system.
 
 ---
 
-## 🛠️ Requirements & Troubleshooting
+# 🛠️ Requirements & Troubleshooting
 
 ### Node.js Dependency
 Because this agent uses the **Model Context Protocol (MCP)**, it requires **Node.js** to be installed on your local machine. The `main.py` script uses `npx` to fetch and run the official DigitalOcean tool server. 
@@ -136,7 +136,7 @@ Ensure your `.env` file is in the root directory. If you see a `401 Unauthorized
 
 ---
 
-## 🤝 Contributing
+# 🤝 Contributing
 This is a demo of the **Golden Path** for AI-driven DevOps. If you'd like to extend the agent's capabilities:
 1. **Add new tools:** Update the `--services` flag in the `npx` command within `main.py`.
 2. **Modify the Brain:** Switch the `model` parameter in `ChatGradient` to test different Llama variants.
