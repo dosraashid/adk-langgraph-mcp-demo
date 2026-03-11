@@ -1,4 +1,6 @@
 gradient-adk
+langchain-core>=0.2.43
+langchain>=0.2.16
+langchain-gradient
 langgraph
-langchain-core
-gradient
+python-dotenv
