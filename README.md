@@ -106,7 +106,30 @@ DIGITALOCEAN_API_TOKEN="your_DO_token"
 
 Make sure .env is listed in your .gitignore to prevent accidental exposure of secrets.
 
-### 4. Run
+### 4. Initialization
+
+Before running the agent for the first time, you must initialize the Gradient configuration:
+
+```bash
+gradient agent init
+```
+
+When prompted:
+Agent workspace name: Give it any name like `OceanSentry`.
+Agent deployment name: Set this to `main`.
+
+If you have already initialized but are still seeing the error, ensure your agent is configured locally:
+
+```bash
+gradient agent configure
+```
+
+When prompted:
+Agent workspace name: Give it any name like `OceanSentry`.
+Agent deployment name: Set this to `main`.
+Entrypoint: main.py
+
+### 5. Run
 
 Start the agent server locally using the Gradient ADK:
 
