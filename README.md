@@ -89,7 +89,7 @@ Install the required Python dependencies:
 
 ```bash
 git clone https://github.com/dosraashid/adk-langgraph-mcp-demo
-cd adk-langgraph-demo
+cd adk-langgraph-mcp-demo
 python3.12 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
