@@ -1,6 +1,6 @@
 import os
 import asyncio
-from typing import Optional
+from typing import Optional, TypedDict, Annotated
 from dotenv import load_dotenv
 
 # LangChain & LangGraph imports
@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph.message import add_messages
 
 # MCP Adapter imports
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -18,6 +19,12 @@ from gradient_adk import entrypoint
 
 # Load variables from .env
 load_dotenv()
+
+# --- Define the AgentState inline ---
+class AgentState(TypedDict):
+    # add_messages ensures that new messages are appended to the list, 
+    # rather than overwriting the existing messages.
+    messages: Annotated[list, add_messages]
 
 # 1. Define the Agent Logic
 async def run_mcp_agent(user_input: str, thread_id: str):
@@ -42,8 +49,6 @@ async def run_mcp_agent(user_input: str, thread_id: str):
     )
     
     llm_with_tools = llm.bind_tools(tools)
-
-    from state import AgentState
 
     def call_model(state: AgentState):
         response = llm_with_tools.invoke(state["messages"])
