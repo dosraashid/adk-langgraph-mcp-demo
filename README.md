@@ -53,10 +53,11 @@ Ensures **Security by Design**.
 
 | Capability | Description |
 |---|---|
-| **LLM Reasoning** | Powered by Serverless Inference, providing high-level DevOps intelligence without the need for local GPUs, with the flexibility to easily switch between any supported models by updating the model parameter in main.py. |
-| **MCP Integration** | Leverages the official DigitalOcean MCP server via `npx` to dynamically execute real-world tools for Droplets, Apps, and Databases. |
-| **LangGraph Orchestration** | Handles complex, multi-step reasoning—such as identifying a failing service and suggesting a fix—in a single turn. |
-| **Managed Persistence** | Uses LangGraph `MemorySaver` to isolate user sessions via `thread_id`, remembering infrastructure context across prompts. |
+| **Managed Conversation History** | Supports "Checkpointer-style" persistence. The agent doesn't just remember text; it remembers tool execution states, enabling fault-tolerance and session resume. |
+| **Full MCP Service Scope** | Out-of-the-box support for all DigitalOcean services, including `apps`, `droplets`, `databases`, `doks`, `networking`, `accounts`, `insights`, `marketplace`, and `spaces`. |
+| **Thread Isolation** | Strict context handoff using `thread_id`. Information from `session-alpha` is never leaked to `session-beta`. |
+| **Standardized Telemetry** | All tool interactions follow LangGraph `ToolNode` semantics, making it easy to integrate with observability tools in the future. |
+| **Hybrid Tooling** | Demonstrates how to mix high-level Cloud APIs (via MCP) with local business logic (via `@tool` decorated Python functions). |
 
 ---
 
@@ -142,24 +143,28 @@ curl -X POST http://localhost:8080/run \
 
 ---
 
-### 🧠 Testing Context Memory & Thread Isolation
+## 🧪 Verification Commands & Test Cases
 
-Use the following test cases in sequence to verify that the agent remembers previous interactions on the same thread, but securely isolates data from different threads.
+This agent uses **Thread-Scoped Persistence** via LangGraph Checkpointers. Run these test cases in sequence in your terminal to verify that memory is isolated between sessions, and that the agent can seamlessly route between cloud (MCP) and local tools.
 
 | Test Case | Purpose | Terminal Command (`curl`) | Expected Behavior |
 | :--- | :--- | :--- | :--- |
-| **1. Establish Context** | Fetches data and saves it to a specific thread. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "Can you list the names of any 5 DigitalOcean apps in my account?", "thread_id": "session-alpha"}'` | Agent triggers the MCP tool, retrieves apps, and returns 5 names. |
-| **2. Test Memory** | Verifies the agent remembers the exact conversation history. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What was the very first question I asked you in this conversation?", "thread_id": "session-alpha"}'` | Agent answers with: *"Can you list the names of any 5 DigitalOcean apps..."* |
-| **3. Test Isolation** | Proves threads are kept completely separate. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What was the very first question I asked you in this conversation?", "thread_id": "session-beta"}'` | Agent answers with: *"What was the very first question I asked you..."* proving it has no access to session-alpha. |
+| **1. Establish Context (MCP)** | Fetch cloud data & save to Thread A. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "List my DigitalOcean apps.", "thread_id": "alpha"}'` | Agent triggers the `apps-list` tool via the prebuilt LangGraph `ToolNode` and returns your apps. |
+| **2. Test Local Tools** | Verify access to custom Python functions. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "Calculate the cloud cost for running an instance for 100 hours if the monthly price is $20.", "thread_id": "alpha"}'` | Agent routes to the local `@tool` decorated `calculate_cloud_cost` function and returns the exact math. |
+| **3. Verify Context Recall** | Test exact conversation history recall in same thread. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What was the very first question I asked you?", "thread_id": "alpha"}'` | Checkpointer retrieves `MessagesState`, and the agent accurately replies that you asked it to list your apps. |
+| **4. Test Thread Isolation** | Prove memory is strictly scoped and isolated. | `curl -X POST http://localhost:8080/run -H "Content-Type: application/json" -d '{"prompt": "What was the very first question I asked you?", "thread_id": "beta"}'` | Agent looks at the isolated `beta` thread, sees it is empty, and replies that this is your first question. |
 
----
 ---
 
 ## 🏗 Architecture: The Hybrid Runtime
 
-1. **Gradient ADK Host:** Manages the local API server (/run), the LangGraph state machine, and persistent session memory via thread_id.
-2. **Local Node.js Client:** Spawns a subprocess via MCP (stdio) using npx to securely interact with your live DigitalOcean infrastructure.
-3. **Cloud Serverless Inference:** Offloads the complex, multi-step ReAct reasoning to the frontier OpenAI GPT-5.4 model, routed securely through DigitalOcean's native Gradient AI gateway.
+This agent implements the LangGraph Golden Path for DevOps automation, providing a standardized bridge between local infrastructure and cloud-hosted frontier models.
+
+1. **Orchestration (LangGraph):** Uses a StateGraph with MessagesState to manage the reasoning loop. This satisfies the requirement for a standardized open-source framework for agentic flow.
+2. **Standardized Tool Execution (ToolNode):** Employs the official LangGraph ToolNode to handle tool execution. This ensures telemetry is captured consistently, allowing tool calls to be recorded in history for replay or auditing.
+3. **Managed Persistence (Checkpointers):** Employs MemorySaver to provide checkpointer-style persistence. This enables scoped memory per thread_id, allowing sessions to be resumed, replayed, or isolated.
+4. **Hybrid MCP Runtime:** Bridges local User-Defined Functions (Python) with the DigitalOcean MCP Server (providing 9+ cloud services) via a secure stdio subprocess.
+5. **Frontier Inference:** Routes complex ReAct reasoning to GPT-5.4 (or Llama 3.3) via the DigitalOcean Gradient AI gateway using the native Gradient SDK.
 
 ---
 
