@@ -115,19 +115,8 @@ gradient agent init
 ```
 
 When prompted:
-Agent workspace name: Give it any name like `OceanSentry`.
+Agent workspace name: Give it any random name like `OceanSentry`.
 Agent deployment name: Set this to `main`.
-
-If you have already initialized but are still seeing the error, ensure your agent is configured locally:
-
-```bash
-gradient agent configure
-```
-
-When prompted:
-Agent workspace name: Give it any name like `OceanSentry`.
-Agent deployment name: Set this to `main`.
-Entrypoint: main.py
 
 ### 5. Run
 
