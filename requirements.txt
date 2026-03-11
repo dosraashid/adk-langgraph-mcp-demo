@@ -1,14 +1,14 @@
 # --- AI Inference ---
-langchain-core>=1.0.0   # Required for newer MCP adapters
-gradient                # Official SDK to access GPT-5.4
+langchain-core>=1.0.0          # Essential core logic for message handling
+gradient                       # Official SDK to access GPT-5.4 on DigitalOcean
 
 # --- Orchestration & Memory ---
-langgraph>=0.2.0        # Robust state management
+langgraph>=0.2.0               # Manages reasoning loops and persistent state
 
 # --- Model Context Protocol (MCP) ---
-mcp>=1.2.0              # Latest MCP Python SDK
-langchain-mcp-adapters>=0.2.0  # Modern tool-loading logic
+mcp>=1.2.0                     # The core official Python SDK for MCP
+langchain-mcp-adapters>=0.2.0  # Required for modern tool-loading logic
 
 # --- Utilities ---
-gradient-adk            # Local runner
-python-dotenv           # Environment management
+gradient-adk                   # Allows running via 'gradient agent run'
+python-dotenv                  # Securely loads your .env variables
