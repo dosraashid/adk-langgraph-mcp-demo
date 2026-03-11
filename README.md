@@ -40,6 +40,8 @@ adk-langgraph-demo/
 
 1. **Environment Setup:**
    ```bash
+   git clone https://github.com/dosraashid/adk-langgraph-demo
+   cd adk-langgraph-demo
    python3.12 -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
