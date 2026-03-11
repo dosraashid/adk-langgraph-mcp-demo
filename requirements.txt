@@ -1,4 +1,4 @@
-# Core ADK and Models
+# Base SDKs
 gradient-adk>=0.2.11
 langchain-gradient>=0.1.24
 
@@ -6,7 +6,7 @@ langchain-gradient>=0.1.24
 mcp>=1.2.1
 langchain-mcp-adapters>=0.2.1
 
-# LangChain Ecosystem
+# LangChain Ecosystem (The Fix)
 langchain-core>=0.3.81
 langgraph>=1.1.0
 
