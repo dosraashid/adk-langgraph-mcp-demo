@@ -1,7 +1,6 @@
 gradient-adk
-langchain-core>=0.3.0,<0.3.73
+langchain-core>=0.3.30
 langchain-gradient
-langgraph
-langchain-mcp-adapters==0.1.0
-mcp
+langgraph>=0.2.0
+langchain-mcp-adapters>=0.2.0
 python-dotenv
