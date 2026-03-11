@@ -73,6 +73,29 @@ Use these prompts to showcase the unique capabilities of the MCP + LangGraph arc
 
 ---
 
+### 🚀 Initializing the Gradient Agent
+
+Before running or deploying the project, you need to initialize your agent with the Gradient ADK. This step links your local code to the Gradient platform so your `@entrypoint` is recognized.
+
+Run the following command in the root directory of your project:
+
+```bash
+gradient agent init
+```
+
+The CLI will prompt you for a few details to configure your workspace. Here is what you should enter based on this project's setup:
+
+* **Agent Name:** `cloud-pilot-mcp` *(This should match the name in your package.json)*
+* **Language:** `Python`
+* **Framework:** `LangGraph` 
+* **Entrypoint:** `main.py` *(Or the exact name of the file containing your `@entrypoint` function)*
+* **Description:** A DigitalOcean MCP agent that manages cloud infrastructure.
+
+**What this command does:**
+It generates the necessary Gradient configuration files and registers your local agent environment, ensuring that your `main` function is properly mapped as the "front door" for incoming requests.
+
+---
+
 ## 🚀 Choose Your Path
 
 This template is designed to work perfectly in two different environments without changing any code.
