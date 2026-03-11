@@ -1,8 +1,13 @@
-gradient-adk>=0.2.11
-langchain-core>=0.3.81,<0.4.0
-langchain-gradient>=0.1.24
-langgraph>=0.2.0
-langchain-mcp-adapters==0.1.2
-mcp>=1.2.1
-python-dotenv>=1.0.1
-PyYAML>=6.0.1
+# --- AI Inference ---
+langchain-gradient      # Connects to DigitalOcean Serverless Llama 3.3
+
+# --- Orchestration & Memory ---
+langgraph               # Manages reasoning loops and persistent state
+
+# --- Model Context Protocol (MCP) ---
+mcp                     # The core official Python SDK for MCP
+langchain-mcp-adapters  # Bridges MCP servers into LangChain/LangGraph
+
+# --- Utilities ---
+gradient-adk            # Allows running via 'gradient agent run'
+python-dotenv           # Securely loads your .env variables
