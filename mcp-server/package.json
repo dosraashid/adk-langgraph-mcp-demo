@@ -1,0 +1,11 @@
+{
+  "name": "do-mcp-remote-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx @digitalocean/mcp --transport sse --services apps,droplets,databases"
+  },
+  "dependencies": {
+    "@digitalocean/mcp": "latest"
+  }
+}
